@@ -1,120 +1,93 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useState } from 'react'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+type Grid = boolean[][];
+type Vector2 = {x: number, y: number};
+const GRID_SIZE = 5; // 5x5
+const START_STEPS = 2 // Amount of origins targeted before game starts.
+const OFFSETS = [
+  [0, 0],
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+]
 
+function performAction(refGrid: Grid, origin: Vector2) : Grid {
+  let currentGrid = refGrid.map(row => [...row]);
+  for (let i=0; i<OFFSETS.length; i++) {
+    const currentOffset = OFFSETS[i];
+    const newVector = {x: origin.x + currentOffset[1], y: origin.y + currentOffset[0]}
+    if (newVector.y >= 0 && newVector.y < GRID_SIZE 
+      && newVector.x >= 0 && newVector.x < GRID_SIZE) { // If indexes are in-range, proceed.
+        // Inverse current index.
+        currentGrid[newVector.y][newVector.x] = !(currentGrid[newVector.y][newVector.x]);
+    }   
+  }
+  return currentGrid;
+}
+
+function createNewGrid() : Grid {
+  let newGrid: Grid = [];
+  for (let y=0; y<GRID_SIZE; y++) {
+    newGrid[y] = [];
+    for (let x=0; x<GRID_SIZE; x++) {
+      newGrid[y][x] = false;
+    }
+  }
+  for (let i=0; i<START_STEPS; i++) {
+    newGrid = performAction(newGrid, {y: Math.floor(Math.random() * GRID_SIZE), x: Math.floor(Math.random() * GRID_SIZE)} as Vector2)
+  }
+  return newGrid;
+}
+
+function App() {
+  const [grid, setGrid] = useState<Grid>(createNewGrid())
+  const [moves, setMoves] = useState<number>(0);
+  const [win, setWin] = useState<boolean>(false);
+  const onNodeClick = function(y : number, x : number) {
+    setGrid(prevGrid => performAction(prevGrid, {y:y, x:x}));
+    setMoves(prevMoves => prevMoves + 1);
+  }
+  useEffect(()=> {
+    for (let y=0; y<GRID_SIZE; y++) {
+      for (let x=0; x<GRID_SIZE; x++) {
+        if (grid[y][x] == true) return;
+      }
+    } 
+    setWin(true)
+  }, [grid])
+  useEffect(()=> {
+    if (!win) return;
+    setTimeout(function() {
+      setGrid(createNewGrid());
+      setWin(false);
+      setMoves(0);
+    }, 3000)
+  }, [win])
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+      <h1>Wing-it Wednesday: Lights-Out</h1>
+      {win ? (
+        <h2>Congrats, you solved the puzzle in {moves} move(s)!</h2>
+      ) : (
+        <div className="status">
+          <div>Moves: {moves}</div>
+          <div>Lowest Moves Possible: {START_STEPS}</div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      )}
+      <div className="grid">
+        {grid.map((row, y) => (
+          <div className='grid-row' key={"row-"+y}>
+            {row.map((isEnabled, x) => {
+              return (
+                <div onClick={() => onNodeClick(y, x)} className="grid-box" key={"col-"+x} style={{backgroundColor: isEnabled ? "yellow" : "gray"}}>
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
     </>
   )
 }
